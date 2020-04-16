@@ -7,37 +7,50 @@
         <link rel="stylesheet" href="style.css">
     </head>
     <body>
-        <div style="background: url(./fruit_orange.png) no-repeat 450px 380px;">
+        <div style="background: url(./fruit_orange.png) no-repeat 450px 450px;">
         <div id="without_exp">
         <h2>Taiko Timing Changer</h2>
-        <div id="items">
-        <form name="test">
-            <div id="inputs">
-                <h3>Input Beatmap</h3>
-                <input type="file" id="selfile"><br>
-                <textarea name="txt" rows="10" cols="35"></textarea>
+            <div id="items">
+                <form name="test">
+                    <div id="inputs">
+                        <h3>Input Beatmap</h3>
+                        <input type="file" id="selfile"><br>
+                        <textarea name="txt" rows="10" cols="35"></textarea>
+                    </div>
+                    <div id="convert">
+                        <input type="button" value="Change!" style="width:80px;height:40px" onclick="convert()">
+                        <br><br><br>
+                    </div>
+                    <div id="outputs">
+                        <h3>Output Beatmap</h3><br>
+                        <textarea name="txt2" rows="10" cols="35"></textarea>
+                    </div>
+                    <div id="change"><br>
+                        Change value:<textarea name="changeval" rows="1" cols="5"></textarea><br>
+                        PreviewPoints:<input type="checkbox" name="ischange" checked="checked"><br>
+                        Bookmarks:<input type="checkbox" name="ischange" checked="checked"><br>
+                        TimingPoints:<input type="checkbox" name="ischange" checked="checked"><br>
+                        HitObjects:<input type="checkbox" name="ischange" checked="checked"><br>
+                    </div>
+                    <div id="download">
+                        <input type="button" value="Download!" style="width:150px;height:70px" onclick="doDownload()">
+                        <br><br>
+                    </div>
+                </form>
             </div>
-            <div id="convert">
-                <input type="button" value="Change!" onclick="convert()">
-                <h6>change value</h6>
-                <textarea name="changeval" rows="1" cols="5"></textarea>
-            </div>
-            <div id="outputs">
-                <h3>Output Beatmap</h3><br>
-                <textarea name="txt2" rows="10" cols="35"></textarea>
-            </div>
-            <div id="download">
-                <input type="button" value="Download!" style="width:100px;height:50px" onclick="doDownload()">
-            </div>
-        </form>
         </div>
+        <div id="exp"><br>
+            <h3>使い方</h3>
+            <p>1. 「ファイルを選択」ボタンからファイルを選択<br>(ファイルをボタンに直接ドラッグ&ドロップでも行けます)</p>
+            <p>2. Change valueにどれ位ずらしたいかの値を入力 減らしたい時は-をつけましょう</p>
+            <p>3. どこのタイミングを変更したいかにチェックを入れてください！</p>
+            <p>4.「Change!」を押すと右側にタイミングがずれたものが表示されます</p>
+            <p>5. コピーして元のファイルに貼り付ける、Downloadボタンを押すなどしてください</p><br>
+            <p>（操作ミスした時はまだ対応してないので、リロードしてください… すいません）</p>
+            <p>音源を変更したとき、作譜途中でタイミングのズレに気づいた時などにお使い下さい！</p>
         </div>
-        <div id="exp">
-            <h3>使い方(音源差し替え時に便利！)</h3>
-            <p>１．「ファイルを選択」ボタンからファイルを選択<br>(ファイルを直接ドラッグ&ドロップでも行けます)</p>
-            <p>２．Change valueにどれ位ずらしたいかの値を入力 減らしたい時は-をつけましょう</p>
-            <p>３．「Change!」を押すと右側にタイミングがずれたものが表示されます</p>
-            <p>４．コピーして元のファイルに貼り付けるもよし　ダウンロードするもよし</p>
+        <div id="footer">
+            <br>2020 Created by 3PagE
         </div>
     </div>
     </body>
@@ -70,6 +83,7 @@
     var changeval;
     var source_obj = new Array();
     var bookmarks = new Array();
+    var ischange = document.getElementsByName("ischange");//previewpoints,bookmarks,timingpoints,hitobjects
 
     function convert(){
         var tmp = document.test.txt.value.replace(/\r\n|\r/g, "\n");
@@ -80,6 +94,7 @@
             changeval = 0;
         }
         else changeval = document.test.changeval.value;
+        //outArray.push(ischange[0].checked);
 
         for ( var i = 0; i < lines.length; i++ ) {
             // source内のクリア
@@ -90,7 +105,9 @@
             }
 
             if (lines[i].slice( 0, 12) == 'PreviewTime:'){
-                previewtime = Number(lines[i].slice(13))+Number(changeval)
+                if(ischange[0].checked)
+                    previewtime = Number(lines[i].slice(13))+Number(changeval);
+                else previewtime = Number(lines[i].slice(13));
                 outArray.push('PreviewTime: '+ previewtime + '\n');
                 continue;
             }
@@ -138,7 +155,9 @@
         }
         outArray.push('Bookmarks: ');
         for (var i=0; i < bookmark_sum; i++ ) {
-            outArray.push(Number(bookmarks[i]) + Number(changeval));
+            if(ischange[1].checked)
+                outArray.push(Number(bookmarks[i]) + Number(changeval));
+            else outArray.push(Number(bookmarks[i]));
             if(i != bookmark_sum-1) outArray.push(',');
         }
         outArray.push('\n');
@@ -168,7 +187,11 @@
 
         //outArray.push(source[0] + changeval);
         for (var i=0; i < 8; i++ ) {
-            if(i == 0) outArray.push(Number(source[i]) + Number(changeval));
+            if(i == 0){
+                if(ischange[2].checked)
+                    outArray.push(Number(source[i]) + Number(changeval));
+                else outArray.push(Number(source[i]));
+            }
             else outArray.push(Number(source[i]));
             if(i != 7) outArray.push(',');
         }
@@ -202,7 +225,11 @@
         //outArray.push(source[0] + changeval);
         
         for (var i=0; i < 6; i++ ) {
-            if(i == 2) outArray.push(Number(source_obj[i]) + Number(changeval));
+            if(i == 2){
+                if(ischange[3].checked)
+                    outArray.push(Number(source_obj[i]) + Number(changeval));
+                else outArray.push(Number(source_obj[i]));
+            }
             else if(i == 5) outArray.push(source_obj[i]);
             else outArray.push(Number(source_obj[i]));
             if(i != 5)outArray.push(',');
