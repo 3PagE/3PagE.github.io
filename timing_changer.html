@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>Taiko Timing Changer</title>
+        <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div style="background: url(./fruit_orange.png) no-repeat 450px 380px;">
+        <div id="without_exp">
+        <h2>Taiko Timing Changer</h2>
+        <div id="items">
+        <form name="test">
+            <div id="inputs">
+                <h3>Input Beatmap</h3>
+                <input type="file" id="selfile"><br>
+                <textarea name="txt" rows="10" cols="35"></textarea>
+            </div>
+            <div id="convert">
+                <input type="button" value="Change!" onclick="convert()">
+                <h6>change value</h6>
+                <textarea name="changeval" rows="1" cols="5"></textarea>
+            </div>
+            <div id="outputs">
+                <h3>Output Beatmap</h3><br>
+                <textarea name="txt2" rows="10" cols="35"></textarea>
+            </div>
+            <div id="download">
+                <input type="button" value="Download!" style="width:100px;height:50px" onclick="doDownload()">
+            </div>
+        </form>
+        </div>
+        </div>
+        <div id="exp">
+            <h3>使い方(音源差し替え時に便利！)</h3>
+            <p>１．「ファイルを選択」ボタンからファイルを選択<br>(ファイルを直接ドラッグ&ドロップでも行けます)</p>
+            <p>２．Change valueにどれ位ずらしたいかの値を入力 減らしたい時は-をつけましょう</p>
+            <p>３．「Change!」を押すと右側にタイミングがずれたものが表示されます</p>
+            <p>４．コピーして元のファイルに貼り付けるもよし　ダウンロードするもよし</p>
+        </div>
+    </div>
+    </body>
+</html>
+
+<script type='text/javascript'>
+    var obj1 = document.getElementById("selfile");
+    var filename = "";
+
+    //ダイアログでファイルが選択された時
+    obj1.addEventListener("change",function(evt){
+
+        var file = evt.target.files;
+
+        //FileReaderの作成
+        var reader = new FileReader();
+        //テキスト形式で読み込む
+        reader.readAsText(file[0]);
+        filename = "[CONVERTED]" + file[0].name;
+        //読込終了後の処理
+        reader.onload = function(ev){
+        //テキストエリアに表示する
+        document.test.txt.value = reader.result;
+        }
+    },false);
+
+
+    var outArray = new Array();
+    var source = new Array();
+    var changeval;
+    var source_obj = new Array();
+    var bookmarks = new Array();
+
+    function convert(){
+        var tmp = document.test.txt.value.replace(/\r\n|\r/g, "\n");
+        var lines = tmp.split( '\n' );
+        var state = 'none';
+        var previewtime;
+        if (!document.test.changeval.value) {
+            changeval = 0;
+        }
+        else changeval = document.test.changeval.value;
+
+        for ( var i = 0; i < lines.length; i++ ) {
+            // source内のクリア
+            if ( lines[i] == '' ) {
+                if(state != 'none')state = 'none';
+                outArray.push('\n');
+                continue;
+            }
+
+            if (lines[i].slice( 0, 12) == 'PreviewTime:'){
+                previewtime = Number(lines[i].slice(13))+Number(changeval)
+                outArray.push('PreviewTime: '+ previewtime + '\n');
+                continue;
+            }
+            if (lines[i].slice( 0, 10) == 'Bookmarks:'){
+                bookmarkdiv(lines[i]);
+                continue;
+            }
+            if (state == 'none') outArray.push(lines[i] + '\n');
+            else if (state == 'timing') timingdiv(lines[i]);
+            else if (state == 'hitobject') objectdiv(lines[i]);
+            if (lines[i] == '[TimingPoints]') state = 'timing';
+            else if (lines[i] == '[HitObjects]') state = 'hitobject';
+        }
+        document.test.txt2.value = outArray.join('');
+    }
+
+    function bookmarkdiv(lines){
+        var colon = 0;
+        var bookmark_sum;
+        for (var i=0; i < lines.length; i++ ) {
+            if(lines[i] == ',')
+                colon = colon + 1;
+        }
+        bookmark_sum = colon+1;
+        for (var i=0; i < bookmark_sum; i++ ) {
+            bookmarks[i] = '';
+        }
+        colon = 0;
+        for (var i=0; i < lines.length; i++ ) {
+            for (var j=0; j < bookmark_sum; j++ ){
+                if(colon == j)
+                    bookmarks[j] += lines[i];
+            }
+            if(lines[i] == ',')
+                colon = colon + 1;
+        }
+        for (var i=0; i < bookmark_sum; i++ ) { // sourceの末尾の','を消去
+            if(i == 0){
+                bookmarks[i] = bookmarks[i].slice(10);
+                bookmarks[i] = bookmarks[i].slice( 0, -1 );
+            }
+            else if(i == bookmark_sum-1) continue;
+            else bookmarks[i] = bookmarks[i].slice( 0, -1 );
+            //var a = sourceStr.slice( 0, -1 ) ;
+        }
+        outArray.push('Bookmarks: ');
+        for (var i=0; i < bookmark_sum; i++ ) {
+            outArray.push(Number(bookmarks[i]) + Number(changeval));
+            if(i != bookmark_sum-1) outArray.push(',');
+        }
+        outArray.push('\n');
+    }
+
+    function timingdiv(lines){
+        //source = {タイミング,x0.95(100/0.95),"4"/4,音,たぶん音,Vol,BPM指定かどうか,Kiai}
+        var colon = 0;
+        for (var i=0; i < 8; i++ )
+            source[i] = '';
+        // colonのクリア
+        colon = 0;
+        // 空行処理
+        for (var i=0; i < lines.length; i++ ) { // source配列に格納
+            //outArray.push(lines[i][j]);
+            for (var j=0; j < 8; j++ ){
+                if(colon == j)
+                    source[j] += lines[i];
+            }
+            if(lines[i] == ',')
+                colon = colon + 1;
+        }
+        for (var i=0; i < 7; i++ ) { // sourceの末尾の','を消去
+            source[i] = source[i].slice( 0, -1 );
+            //var a = sourceStr.slice( 0, -1 ) ;
+        }
+
+        //outArray.push(source[0] + changeval);
+        for (var i=0; i < 8; i++ ) {
+            if(i == 0) outArray.push(Number(source[i]) + Number(changeval));
+            else outArray.push(Number(source[i]));
+            if(i != 7) outArray.push(',');
+        }
+        outArray.push('\n');
+
+        //outArray.push(lines);
+    }
+
+    function objectdiv(lines){
+        //source_obj = {X軸,Y軸,タイミング,Start(Y=5/N=1),donkat,知らん}
+        var colon = 0;
+        for (var i=0; i < 6; i++ )
+            source_obj[i] = '';
+        // colonのクリア
+        colon = 0;
+        // 空行処理
+        for (var i=0; i < lines.length; i++ ) { // source配列に格納
+            //outArray.push(lines[i][j]);
+            for (var j=0; j < 6; j++ ){
+                if(colon == j)
+                    source_obj[j] += lines[i];
+            }
+            if(lines[i] == ',')
+                colon = colon + 1;
+        }
+        for (var i=0; i < 5; i++ ) { // sourceの末尾の','を消去
+            source_obj[i] = source_obj[i].slice( 0, -1 );
+            //var a = sourceStr.slice( 0, -1 ) ;
+        }
+
+        //outArray.push(source[0] + changeval);
+        
+        for (var i=0; i < 6; i++ ) {
+            if(i == 2) outArray.push(Number(source_obj[i]) + Number(changeval));
+            else if(i == 5) outArray.push(source_obj[i]);
+            else outArray.push(Number(source_obj[i]));
+            if(i != 5)outArray.push(',');
+        }
+        outArray.push('\n');
+
+        //outArray.push(lines);
+    }
+
+    function doDownload() {
+        var content = document.test.txt2.value;
+        var blob = new Blob( [ content ], { "type" : "text/plain" } );
+        if ( window.navigator.msSaveBlob ) { // IE
+            window.navigator.msSaveBlob( blob, filename );
+        } else {
+            var a = document.createElement( "a" );
+            a.download = filename;
+            a.href     = window.URL.createObjectURL( blob );
+            var div = document.getElementById( "inputs" );
+            div.appendChild( a );
+            a.click();
+            div.removeChild( a );
+        }
+    }
+</script>
+
+<!--
+https://www.html5rocks.com/ja/tutorials/file/dndfiles/
+https://qiita.com/wadahiro/items/eb50ac6bbe2e18cf8813
+http://nanoappli.com/blog/archives/655
+-->
