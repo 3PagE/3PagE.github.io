@@ -82,8 +82,12 @@
     var source = new Array();
     var changeval;
     var source_obj = new Array();
+    var source_circle = new Array();
+    var source_slider = new Array();
+    var source_spinner = new Array();
     var bookmarks = new Array();
     var ischange = document.getElementsByName("ischange");//previewpoints,bookmarks,timingpoints,hitobjects
+    var colon = 0;
 
     function convert(){
         var tmp = document.test.txt.value.replace(/\r\n|\r/g, "\n");
@@ -105,7 +109,7 @@
             }
 
             if (lines[i].slice( 0, 12) == 'PreviewTime:'){
-                if(ischange[0].checked)
+                if(ischange[0].checked == true)
                     previewtime = Number(lines[i].slice(13))+Number(changeval);
                 else previewtime = Number(lines[i].slice(13));
                 outArray.push('PreviewTime: '+ previewtime + '\n');
@@ -125,7 +129,7 @@
     }
 
     function bookmarkdiv(lines){
-        var colon = 0;
+        colon = 0;
         var bookmark_sum;
         for (var i=0; i < lines.length; i++ ) {
             if(lines[i] == ',')
@@ -155,7 +159,7 @@
         }
         outArray.push('Bookmarks: ');
         for (var i=0; i < bookmark_sum; i++ ) {
-            if(ischange[1].checked)
+            if(ischange[1].checked == true)
                 outArray.push(Number(bookmarks[i]) + Number(changeval));
             else outArray.push(Number(bookmarks[i]));
             if(i != bookmark_sum-1) outArray.push(',');
@@ -165,7 +169,7 @@
 
     function timingdiv(lines){
         //source = {タイミング,x0.95(100/0.95),"4"/4,音,たぶん音,Vol,BPM指定かどうか,Kiai}
-        var colon = 0;
+        colon = 0;
         for (var i=0; i < 8; i++ )
             source[i] = '';
         // colonのクリア
@@ -185,10 +189,10 @@
             //var a = sourceStr.slice( 0, -1 ) ;
         }
 
-        //outArray.push(source[0] + changeval);
+        //outArray.push(source[0] + changeval);e
         for (var i=0; i < 8; i++ ) {
             if(i == 0){
-                if(ischange[2].checked)
+                if(ischange[2].checked == true)
                     outArray.push(Number(source[i]) + Number(changeval));
                 else outArray.push(Number(source[i]));
             }
@@ -201,8 +205,12 @@
     }
 
     function objectdiv(lines){
-        //source_obj = {X軸,Y軸,タイミング,Start(Y=5/N=1),donkat,知らん}
-        var colon = 0;
+        //source_obj = 3種類あります
+        //source_circle = 6{X軸,Y軸,タイミング,Start(Y=5/N=1),donkat,知らん}
+        //source_slider = 8{X軸,Y軸,タイミング,slider(2),donkat,
+        //                Short|long(L|P)|中間点or終点,折り返し回数,1回あたりの長さ}
+        //source_spinner= 7{X軸,Y軸,タイミング(始点),spinner(12),donkat,タイミング(終点),知らん}
+        colon = 0;
         for (var i=0; i < 6; i++ )
             source_obj[i] = '';
         // colonのクリア
@@ -210,33 +218,121 @@
         // 空行処理
         for (var i=0; i < lines.length; i++ ) { // source配列に格納
             //outArray.push(lines[i][j]);
+            if(lines[i] == ',')
+                colon = colon + 1;
+        }
+        switch(colon){
+            case 5: circlediv(lines);break;
+            case 7: sliderdiv(lines);break;
+            case 6: spinnerdiv(lines);break;
+            default: break;
+        }
+
+        //outArray.push(source[0] + changeval);
+
+        //outArray.push(lines);
+    }
+
+    function circlediv(lines){
+        colon = 0;
+        for (var i=0; i < 6; i++ )
+            source_circle[i] = '';
+        //source_circle = 6{X軸,Y軸,タイミング,Start(Y=5/N=1),donkat,知らん}
+        for (var i=0; i < lines.length; i++ ) { // source配列に格納
+            //outArray.push(lines[i][j]);
             for (var j=0; j < 6; j++ ){
                 if(colon == j)
-                    source_obj[j] += lines[i];
+                    source_circle[j] += lines[i];
             }
             if(lines[i] == ',')
                 colon = colon + 1;
         }
+        colon = 0;
         for (var i=0; i < 5; i++ ) { // sourceの末尾の','を消去
-            source_obj[i] = source_obj[i].slice( 0, -1 );
+            source_circle[i] = source_circle[i].slice( 0, -1 );
             //var a = sourceStr.slice( 0, -1 ) ;
         }
-
-        //outArray.push(source[0] + changeval);
-        
         for (var i=0; i < 6; i++ ) {
             if(i == 2){
-                if(ischange[3].checked)
-                    outArray.push(Number(source_obj[i]) + Number(changeval));
-                else outArray.push(Number(source_obj[i]));
+                if(ischange[3].checked == true)
+                    outArray.push(Number(source_circle[i]) + Number(changeval));
+                else outArray.push(Number(source_circle[i]));
             }
-            else if(i == 5) outArray.push(source_obj[i]);
-            else outArray.push(Number(source_obj[i]));
+            else if(i == 5) outArray.push(source_circle[i]);
+            else outArray.push(Number(source_circle[i]));
             if(i != 5)outArray.push(',');
         }
         outArray.push('\n');
+    }
 
-        //outArray.push(lines);
+    function sliderdiv(lines){
+        colon = 0;
+        for (var i=0; i < 8; i++ )
+            source_slider[i] = '';
+        //source_slider = 8{X軸,Y軸,タイミング,slider(2),donkat,
+        //                Short|long(L|P)|中間点or終点,折り返し回数,1回あたりの長さ}
+        for (var i=0; i < lines.length; i++ ) { // source配列に格納
+            //outArray.push(lines[i][j]);
+            for (var j=0; j < 8; j++ ){
+                if(colon == j)
+                    source_slider[j] += lines[i];
+            }
+            if(lines[i] == ',')
+                colon = colon + 1;
+        }
+        colon = 0;
+        for (var i=0; i < 7; i++ ) { // sourceの末尾の','を消去
+            source_slider[i] = source_slider[i].slice( 0, -1 );
+            //var a = sourceStr.slice( 0, -1 ) ;
+        }
+        for (var i=0; i < 8; i++ ) {
+            if(i == 2){
+                if(ischange[3].checked == true)
+                    outArray.push(Number(source_slider[i]) + Number(changeval));
+                else outArray.push(Number(source_slider[i]));
+            }
+            else if(i == 5) outArray.push(source_slider[i]);
+            else outArray.push(Number(source_slider[i]));
+            if(i != 7)outArray.push(',');
+        }
+        outArray.push('\n');
+    }
+
+    function spinnerdiv(lines){
+        colon = 0;
+        for (var i=0; i < 7; i++ )
+            source_spinner[i] = '';
+        //source_spinner= 7{X軸,Y軸,タイミング(始点),spinner(12),donkat,タイミング(終点),知らん}
+        for (var i=0; i < lines.length; i++ ) { // source配列に格納
+            //outArray.push(lines[i][j]);
+            for (var j=0; j < 7; j++ ){
+                if(colon == j)
+                    source_spinner[j] += lines[i];
+            }
+            if(lines[i] == ',')
+                colon = colon + 1;
+        }
+        colon = 0;
+        for (var i=0; i < 6; i++ ) { // sourceの末尾の','を消去
+            source_spinner[i] = source_spinner[i].slice( 0, -1 );
+            //var a = sourceStr.slice( 0, -1 ) ;
+        }
+        for (var i=0; i < 7; i++ ) {
+            if(i == 2){
+                if(ischange[3].checked == true)
+                    outArray.push(Number(source_spinner[i]) + Number(changeval));
+                else outArray.push(Number(source_spinner[i]));
+            }
+            else if(i == 5){
+                if(ischange[3].checked == true)
+                    outArray.push(Number(source_spinner[i]) + Number(changeval));
+                else outArray.push(Number(source_spinner[i]));
+            }
+            else if(i == 6) outArray.push(source_spinner[i]);
+            else outArray.push(Number(source_spinner[i]));
+            if(i != 6)outArray.push(',');
+        }
+        outArray.push('\n');
     }
 
     function doDownload() {
